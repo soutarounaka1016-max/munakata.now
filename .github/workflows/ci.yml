@@ -16,11 +16,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate packaged application
+      - name: Validate packaged application and separated data
         run: |
           python - <<'PY'
           import base64, gzip, json, re
           from pathlib import Path
+
           chunks = []
           for path in sorted(Path('.').glob('payload-*.js')):
               match = re.search(r'push\("([A-Za-z0-9+/=]+)"\)', path.read_text())
@@ -28,18 +29,39 @@ jobs:
               chunks.append(match.group(1))
           assert len(chunks) == 6
           html = gzip.decompress(base64.b64decode(''.join(chunks))).decode()
+
           data_match = re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>', html, re.S)
           assert data_match, 'embedded data not found'
           data = json.loads(data_match.group(1))
+          discoveries = json.loads(Path('discoveries.json').read_text())
+          sources = json.loads(Path('sources.json').read_text())
+
           assert len(data['news']) >= 8
           assert len(data['events']) >= 5
-          assert len(data['discoveries']) >= 8
+          assert len(discoveries) >= 9
+          assert len(sources) >= 12
           assert len({x['id'] for x in data['news']}) == len(data['news'])
-          assert len({x['id'] for x in data['discoveries']}) == len(data['discoveries'])
-          assert '宗像の「行ってみたい」が見つかる。' in html
-          assert '宗像の新しいもの' in html
-          assert 'funScore' in html
-          assert 'OpenStreetMap' in html
-          assert 'localStorage' in html
-          print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(data['discoveries'])}")
+          assert len({x['id'] for x in discoveries}) == len(discoveries)
+          assert len({x['id'] for x in sources}) == len(sources)
+          assert all(x.get('region') for x in discoveries)
+          assert all('indoor' in x and 'family' in x for x in discoveries)
+          assert any(x.get('verifiedByOfficial') for x in discoveries)
+          assert any(x.get('kind') == 'discovery' for x in sources)
+          assert any(x.get('kind') == 'official' for x in sources)
+
+          for marker in [
+              '宗像の「行ってみたい」が見つかる。',
+              '宗像の楽しい情報源',
+              'areaFilters',
+              'featureFilters',
+              'weekendFilters',
+              'discoveryStatuses',
+              'discoveries.json',
+              'sources.json',
+              'OpenStreetMap',
+              'localStorage',
+          ]:
+              assert marker in html, marker
+
+          print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(discoveries)}, sources={len(sources)}")
           PY

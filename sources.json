@@ -1,0 +1,110 @@
+[
+  {
+    "id": "tabelog-new",
+    "name": "食べログ NEW OPEN",
+    "description": "宗像市の新店候補を発見",
+    "url": "https://tabelog.com/fukuoka/C40220/rstLst/cond16-00-00/",
+    "emoji": "🆕",
+    "kind": "discovery",
+    "update": "随時"
+  },
+  {
+    "id": "food-city",
+    "name": "食のまち宗像",
+    "description": "宗像産食材の認定店・キッチンカー",
+    "url": "https://www.city.munakata.lg.jp/list01215.html",
+    "emoji": "🍽️",
+    "kind": "official",
+    "update": "公式"
+  },
+  {
+    "id": "commerce",
+    "name": "宗像市商工会",
+    "description": "地域商品・店舗・キャンペーン",
+    "url": "https://www.munakata.or.jp/",
+    "emoji": "🛍️",
+    "kind": "discovery",
+    "update": "新着"
+  },
+  {
+    "id": "yurix",
+    "name": "宗像ユリックス",
+    "description": "文化・スポーツ・催し",
+    "url": "https://yurix.munakata.com/",
+    "emoji": "🎭",
+    "kind": "official",
+    "update": "公式"
+  },
+  {
+    "id": "library",
+    "name": "宗像市民図書館",
+    "description": "展示・親子イベント・講座",
+    "url": "https://munakata.milib.jp/",
+    "emoji": "📚",
+    "kind": "official",
+    "update": "公式"
+  },
+  {
+    "id": "searoad",
+    "name": "海の道むなかた館",
+    "description": "歴史・展示・体験イベント",
+    "url": "https://www.city.munakata.lg.jp/searoad/default.html",
+    "emoji": "🏺",
+    "kind": "official",
+    "update": "公式"
+  },
+  {
+    "id": "roadstation",
+    "name": "道の駅むなかた",
+    "description": "旬の食・催事・地域商品",
+    "url": "https://www.michinoekimunakata.co.jp/",
+    "emoji": "🐟",
+    "kind": "discovery",
+    "update": "新着"
+  },
+  {
+    "id": "tourism",
+    "name": "宗像観光情報",
+    "description": "観光・季節の見どころ",
+    "url": "https://www.genkai.com/",
+    "emoji": "⛩️",
+    "kind": "discovery",
+    "update": "新着"
+  },
+  {
+    "id": "city-events",
+    "name": "宗像市イベント",
+    "description": "市内イベントを横断確認",
+    "url": "https://www.city.munakata.lg.jp/list01673.html",
+    "emoji": "🎪",
+    "kind": "official",
+    "update": "公式"
+  },
+  {
+    "id": "instagram-search",
+    "name": "店舗公式SNS候補",
+    "description": "新メニュー・臨時イベントの発見用",
+    "url": "https://www.google.com/search?q=site%3Ainstagram.com+宗像市+オープン+イベント",
+    "emoji": "📱",
+    "kind": "discovery",
+    "update": "手動確認"
+  },
+  {
+    "id": "jr",
+    "name": "JR九州運行情報",
+    "description": "宗像方面の移動前確認",
+    "url": "https://www.jrkyushu.co.jp/trains/info/fukuoka.html",
+    "emoji": "🚆",
+    "kind": "official",
+    "update": "リアルタイム"
+  },
+  {
+    "id": "city",
+    "name": "宗像市公式",
+    "description": "暮らし・安全の重要情報",
+    "url": "https://www.city.munakata.lg.jp/new_list.html",
+    "emoji": "🏛️",
+    "kind": "official",
+    "update": "公式"
+  }
+]
