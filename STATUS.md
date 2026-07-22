@@ -14,20 +14,22 @@
 | 通常テスト | 成功 | Node標準テスト |
 | データ検証 | 成功 | URL、日付、重複、必須項目 |
 | ブラウザ確認 | Chromium成功 | Playwright使用 |
+| 公開URL確認 | 成功 | HTTP 200と「むなかたNOW」の表示をGitHub Actionsで確認 |
+| 自動更新と再公開 | 成功 | 情報更新からGitHub Pages再公開まで実運転で確認 |
 | WebKit確認 | 未確認 | 実行環境にWebKit本体がないため |
-| GitHub反映 | 完了 | 完成版PRをmainへマージ済み |
-| GitHub Pages | 公開設定待ち | configure-pagesで停止。PagesのSourceをGitHub Actionsにする必要あり |
-| 実機Safari | 未確認 | 公開後にiPadで最終確認が必要 |
+| GitHub反映 | 完了 | mainへ反映済み |
+| GitHub Pages | 公開済み | https://soutarounaka1016-max.github.io/munakata.now/ |
+| 実機Safari | 未確認 | iPadで最終確認が必要 |
 
-## 公開を完了するための残作業
+## 公開情報
 
-1. GitHubのリポジトリ `soutarounaka1016-max/2` を開く
-2. `Settings` → `Pages` を開く
-3. `Build and deployment` の `Source` を `GitHub Actions` にする
-4. `Actions` → `Deploy GitHub Pages` → `Run workflow` を実行する
-5. `https://soutarounaka1016-max.github.io/2/` をiPad Safariで確認する
+- リポジトリ: `soutarounaka1016-max/munakata.now`
+- 公開URL: `https://soutarounaka1016-max.github.io/munakata.now/`
+- 公開確認日時: 2026-07-22 19:30ごろ（日本時間）
+- 公開確認内容: HTTP 200、画面タイトル一致
+- 自動更新確認: 6時間更新ワークフローで、情報取得・再梱包・再公開まで成功
 
-公開確認用の一時PRはmainへマージせず、確認後に閉じています。
+公開確認に使った一時PRと一時検証ファイルは、mainへ残さず削除しています。
 
 ## 情報源
 
@@ -42,3 +44,4 @@
 - 自動取得は公式ページのHTML構造変更で停止する可能性があります。
 - 記事本文の無断転載はせず、短い整理文とリンクだけを掲載します。
 - AI APIは使用していません。初版の分類と短文化はルールベースです。
+- 実機iPad Safariでの最終確認は利用者側で必要です。
