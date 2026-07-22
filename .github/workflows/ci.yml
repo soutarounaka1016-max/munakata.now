@@ -24,17 +24,25 @@ jobs:
 
           chunks = []
           for path in sorted(Path('.').glob('payload-*.js')):
-              match = re.search(r'push\("([A-Za-z0-9+/=]+)"\)', path.read_text())
-              assert match, f'chunk not found: {path}'
-              chunks.append(match.group(1))
+              text = path.read_text()
+              match = re.fullmatch(r'window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([^"]+)"\);\s*', text)
+              assert match, f'invalid chunk wrapper: {path}'
+              chunk = match.group(1)
+              assert re.fullmatch(r'[A-Za-z0-9+/=]+', chunk), f'invalid base64 characters: {path}'
+              chunks.append(chunk)
+
           assert len(chunks) == 6
-          html = gzip.decompress(base64.b64decode(''.join(chunks))).decode()
+          payload = ''.join(chunks)
+          assert len(payload) % 4 == 0, f'invalid base64 length: {len(payload)}'
+          packed = base64.b64decode(payload, validate=True)
+          html = gzip.decompress(packed).decode()
 
           data_match = re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>', html, re.S)
           assert data_match, 'embedded data not found'
           data = json.loads(data_match.group(1))
           discoveries = json.loads(Path('discoveries.json').read_text())
           sources = json.loads(Path('sources.json').read_text())
+          index = Path('index.html').read_text()
 
           assert len(data['news']) >= 8
           assert len(data['events']) >= 5
@@ -63,5 +71,11 @@ jobs:
           ]:
               assert marker in html, marker
 
-          print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(discoveries)}, sources={len(sources)}")
+          for number in range(1, 7):
+              assert f'payload-{number}.js?v=20260722-safari-fix1' in index
+          assert 'chunks.length!==6' in index
+          assert 'replace(/[^A-Za-z0-9+' in index
+          assert 'atob(payload)' in index
+
+          print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(discoveries)}, sources={len(sources)}, payload={len(payload)}")
           PY
