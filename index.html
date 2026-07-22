@@ -1,25 +1,82 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f766e"><title>むなかたNOW</title></head>
-<body><main id="boot" style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:grid;place-items:center;background:#f4f7f6;color:#15302d"><p>むなかたNOWを読み込み中…</p></main>
-<script src="payload-1.js?v=20260722-safari-fix1"></script>
-<script src="payload-2.js?v=20260722-safari-fix1"></script>
-<script src="payload-3.js?v=20260722-safari-fix1"></script>
-<script src="payload-4.js?v=20260722-safari-fix1"></script>
-<script src="payload-5.js?v=20260722-safari-fix1"></script>
-<script src="payload-6.js?v=20260722-safari-fix1"></script>
-<script>
-(async()=>{
-  if (!("DecompressionStream" in globalThis)) throw new Error("このブラウザは展開機能に対応していません。SafariまたはChromeを最新版にしてください。");
-  const chunks=window.MUNAKATA_CHUNKS;
-  if (!Array.isArray(chunks)||chunks.length!==6) throw new Error("アプリのデータをすべて読み込めませんでした。再読み込みしてください。");
-  const raw=chunks.join("");
-  const cleaned=raw.replace(/[^A-Za-z0-9+\/_=-]/g,"").replace(/-/g,"+").replace(/_/g,"/").replace(/=+$/g,"");
-  const payload=cleaned+"=".repeat((4-cleaned.length%4)%4);
-  const binary=atob(payload);
-  const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
-  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
-  const html=await new Response(stream).text();
-  if (!html.includes("<html")&&!html.includes("<!doctype")) throw new Error("アプリデータの展開に失敗しました。再読み込みしてください。");
-  document.open();document.write(html);document.close();
-})().catch(error=>{document.querySelector("#boot").innerHTML=`<section style="max-width:36rem;padding:2rem"><h1>読み込みに失敗しました</h1><p>${error.message}</p><button onclick="location.reload()">再読み込み</button></section>`;console.error(error);});
-</script></body></html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>むなかたNOW</title>
+</head>
+<body style="margin:0">
+  <main id="boot" aria-live="polite" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:grid;place-items:center;background:#f4f7f6;color:#15302d">
+    <section style="max-width:36rem;padding:2rem;text-align:center">
+      <h1 style="font-size:1.35rem;margin:0 0 .75rem">むなかたNOW</h1>
+      <p id="boot-status" style="margin:0">アプリを読み込み中…</p>
+    </section>
+  </main>
+  <script>
+  (()=>{
+    'use strict';
+    const BUILD='20260723-loader2';
+    const CHUNK_COUNT=6;
+    const status=document.querySelector('#boot-status');
+
+    const setStatus=(message)=>{ if(status) status.textContent=message; };
+
+    async function fetchChunk(number,attempt){
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),12000);
+      try{
+        const url=`payload-${number}.js?v=${BUILD}&attempt=${attempt}&t=${Date.now()}`;
+        const response=await fetch(url,{cache:'no-store',signal:controller.signal});
+        if(!response.ok) throw new Error(`データ${number}の取得に失敗しました（${response.status}）`);
+        const text=await response.text();
+        const match=text.match(/window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([A-Za-z0-9+/=]+)"\);\s*$/);
+        if(!match) throw new Error(`データ${number}の形式が正しくありません`);
+        return match[1];
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function unpack(attempt){
+      if(!('DecompressionStream' in globalThis)){
+        throw new Error('このSafariでは展開機能を利用できません。iPadOSを更新してください。');
+      }
+      setStatus(attempt===0?'アプリデータを読み込み中…':'キャッシュを使わず再試行中…');
+      const chunks=await Promise.all(Array.from({length:CHUNK_COUNT},(_,index)=>fetchChunk(index+1,attempt)));
+      const payload=chunks.join('');
+      if(!/^[A-Za-z0-9+/]+={0,2}$/.test(payload)) throw new Error('アプリデータに不正な文字が含まれています');
+      if(payload.length%4!==0) throw new Error('アプリデータの長さが正しくありません');
+      const binary=atob(payload);
+      const bytes=Uint8Array.from(binary,character=>character.charCodeAt(0));
+      const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      const html=await new Response(stream).text();
+      if(!/^\s*<!doctype html>/i.test(html)||!html.includes('<html')) throw new Error('展開後のアプリデータが正しくありません');
+      return html;
+    }
+
+    function showError(error){
+      const message=error&&error.name==='AbortError'?'読み込みが時間切れになりました。通信を確認して再試行してください。':(error?.message||'不明なエラーが発生しました。');
+      document.querySelector('#boot').innerHTML=`<section style="max-width:36rem;padding:2rem;text-align:center"><h1 style="font-size:1.5rem">読み込みに失敗しました</h1><p>${message}</p><div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap"><button id="retry-button" style="font:inherit;padding:.7rem 1rem;border:0;border-radius:999px;background:#0f766e;color:white">キャッシュを無視して再試行</button><button onclick="location.reload()" style="font:inherit;padding:.7rem 1rem;border:1px solid #8ba6a2;border-radius:999px;background:white;color:#15302d">ページを再読み込み</button></div></section>`;
+      document.querySelector('#retry-button')?.addEventListener('click',()=>location.replace(`${location.pathname}?recover=${Date.now()}`));
+      console.error(error);
+    }
+
+    (async()=>{
+      try{
+        const html=await unpack(0);
+        document.open();document.write(html);document.close();
+      }catch(firstError){
+        console.warn('初回読み込みに失敗したため再試行します',firstError);
+        try{
+          const html=await unpack(1);
+          document.open();document.write(html);document.close();
+        }catch(secondError){
+          showError(secondError);
+        }
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>
