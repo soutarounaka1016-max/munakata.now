@@ -21,10 +21,13 @@ jobs:
           python - <<'PY'
           import base64, gzip, json, re
           from pathlib import Path
-          payload_source = Path('payload.js').read_text()
-          payload = re.search(r'MUNAKATA_PAYLOAD="([A-Za-z0-9+/=]+)"', payload_source)
-          assert payload, 'payload not found'
-          html = gzip.decompress(base64.b64decode(payload.group(1))).decode()
+          chunks = []
+          for path in sorted(Path('.').glob('payload-*.js')):
+              match = re.search(r'push\("([A-Za-z0-9+/=]+)"\)', path.read_text())
+              assert match, f'chunk not found: {path}'
+              chunks.append(match.group(1))
+          assert len(chunks) == 6
+          html = gzip.decompress(base64.b64decode(''.join(chunks))).decode()
           data_match = re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>', html, re.S)
           assert data_match, 'embedded data not found'
           data = json.loads(data_match.group(1))
