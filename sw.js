@@ -1,5 +1,5 @@
 const CACHE_NAME = 'munakata-now-v1';
-const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './payload.js'];
+const APP_SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './payload-1.js', './payload-2.js', './payload-3.js', './payload-4.js', './payload-5.js', './payload-6.js'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
   self.skipWaiting();
