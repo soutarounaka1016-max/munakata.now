@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate packaged application
+        run: |
+          python - <<'PY'
+          import base64, gzip, json, re
+          from pathlib import Path
+          payload_source = Path('payload.js').read_text()
+          payload = re.search(r'MUNAKATA_PAYLOAD="([A-Za-z0-9+/=]+)"', payload_source)
+          assert payload, 'payload not found'
+          html = gzip.decompress(base64.b64decode(payload.group(1))).decode()
+          data_match = re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>', html, re.S)
+          assert data_match, 'embedded data not found'
+          data = json.loads(data_match.group(1))
+          assert len(data['news']) >= 8
+          assert len([x for x in data['news'] if x.get('priority')]) >= 3
+          assert len({x['id'] for x in data['news']}) == len(data['news'])
+          assert '30秒で、今日の宗像がわかる。' in html
+          assert 'localStorage' in html
+          print(f"OK: news={len(data['news'])}, events={len(data['events'])}")
+          PY
