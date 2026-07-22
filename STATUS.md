@@ -15,8 +15,19 @@
 | データ検証 | 成功 | URL、日付、重複、必須項目 |
 | ブラウザ確認 | Chromium成功 | Playwright使用 |
 | WebKit確認 | 未確認 | 実行環境にWebKit本体がないため |
-| GitHub Pages | 設定待ちの可能性あり | Actions方式。設定が未有効の場合のみ手動選択が必要 |
-| 実機Safari | 未確認 | iPadで最終確認が必要 |
+| GitHub反映 | 完了 | 完成版PRをmainへマージ済み |
+| GitHub Pages | 公開設定待ち | configure-pagesで停止。PagesのSourceをGitHub Actionsにする必要あり |
+| 実機Safari | 未確認 | 公開後にiPadで最終確認が必要 |
+
+## 公開を完了するための残作業
+
+1. GitHubのリポジトリ `soutarounaka1016-max/2` を開く
+2. `Settings` → `Pages` を開く
+3. `Build and deployment` の `Source` を `GitHub Actions` にする
+4. `Actions` → `Deploy GitHub Pages` → `Run workflow` を実行する
+5. `https://soutarounaka1016-max.github.io/2/` をiPad Safariで確認する
+
+公開確認用の一時PRはmainへマージせず、確認後に閉じています。
 
 ## 情報源
 
