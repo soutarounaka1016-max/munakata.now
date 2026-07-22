@@ -20,22 +20,29 @@ jobs:
         run: |
           python - <<'PY'
           import base64, gzip, json, re
+          from datetime import date
           from pathlib import Path
+          from urllib.parse import urlparse
+
+          chunk_paths = sorted(Path('.').glob('payload-*.js'))
+          assert [path.name for path in chunk_paths] == [f'payload-{n}.js' for n in range(1, 7)]
 
           chunks = []
-          for path in sorted(Path('.').glob('payload-*.js')):
+          wrapper = re.compile(r'window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([A-Za-z0-9+/=]+)"\);\s*')
+          for path in chunk_paths:
               text = path.read_text()
-              match = re.fullmatch(r'window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([^"]+)"\);\s*', text)
+              match = wrapper.fullmatch(text)
               assert match, f'invalid chunk wrapper: {path}'
               chunk = match.group(1)
-              assert re.fullmatch(r'[A-Za-z0-9+/=]+', chunk), f'invalid base64 characters: {path}'
+              assert re.fullmatch(r'[A-Za-z0-9+/]+={0,2}', chunk), f'invalid base64 characters: {path}'
               chunks.append(chunk)
 
-          assert len(chunks) == 6
           payload = ''.join(chunks)
           assert len(payload) % 4 == 0, f'invalid base64 length: {len(payload)}'
           packed = base64.b64decode(payload, validate=True)
           html = gzip.decompress(packed).decode()
+          assert re.match(r'\s*<!doctype html>', html, re.I)
+          assert '<html' in html
 
           data_match = re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>', html, re.S)
           assert data_match, 'embedded data not found'
@@ -51,8 +58,27 @@ jobs:
           assert len({x['id'] for x in data['news']}) == len(data['news'])
           assert len({x['id'] for x in discoveries}) == len(discoveries)
           assert len({x['id'] for x in sources}) == len(sources)
-          assert all(x.get('region') for x in discoveries)
-          assert all('indoor' in x and 'family' in x for x in discoveries)
+
+          allowed_source_kinds = {'discovery', 'official'}
+          for source in sources:
+              assert source.get('name')
+              assert source.get('kind') in allowed_source_kinds
+              parsed = urlparse(source.get('url', ''))
+              assert parsed.scheme == 'https' and parsed.netloc, f'invalid source url: {source}'
+
+          for item in discoveries:
+              assert item.get('id') and (item.get('title') or item.get('name'))
+              assert item.get('region')
+              assert isinstance(item.get('indoor'), bool)
+              assert isinstance(item.get('family'), bool)
+              for field in ('url', 'mapUrl'):
+                  if item.get(field):
+                      parsed = urlparse(item[field])
+                      assert parsed.scheme == 'https' and parsed.netloc, f'invalid {field}: {item}'
+              for field in ('openedAt', 'verifiedAt'):
+                  if item.get(field):
+                      date.fromisoformat(item[field])
+
           assert any(x.get('verifiedByOfficial') for x in discoveries)
           assert any(x.get('kind') == 'discovery' for x in sources)
           assert any(x.get('kind') == 'official' for x in sources)
@@ -71,11 +97,22 @@ jobs:
           ]:
               assert marker in html, marker
 
-          for number in range(1, 7):
-              assert f'payload-{number}.js?v=20260722-safari-fix1' in index
-          assert 'chunks.length!==6' in index
-          assert 'replace(/[^A-Za-z0-9+' in index
-          assert 'atob(payload)' in index
+          loader_markers = [
+              "const BUILD='20260723-loader2'",
+              "cache:'no-store'",
+              'AbortController',
+              'Promise.all',
+              'fetchChunk(index+1,attempt)',
+              "payload.length%4!==0",
+              'atob(payload)',
+              'unpack(1)',
+              'キャッシュを無視して再試行',
+          ]
+          for marker in loader_markers:
+              assert marker in index, marker
+          assert '<script src="payload-' not in index
+          assert "replace(/[^A-Za-z0-9" not in index
+          assert index.count('document.open();document.write(html);document.close();') == 2
 
           print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(discoveries)}, sources={len(sources)}, payload={len(payload)}")
           PY
