@@ -1,0 +1,115 @@
+name: Refresh local information
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refresh official-source headlines
+        run: |
+          python - <<'PY'
+          import base64
+          import datetime as dt
+          import gzip
+          import hashlib
+          import html as html_lib
+          import json
+          import re
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          SOURCES = [
+              ('宗像市', 'https://www.city.munakata.lg.jp/new_list.html', 'https://www.city.munakata.lg.jp', 'city'),
+              ('宗像ユリックス', 'https://yurix.munakata.com/newsList.php', 'https://yurix.munakata.com', 'yurix'),
+          ]
+
+          def category(title):
+              if re.search(r'防災|避難|警報|注意報|安全|事故|パトロール|遊泳', title): return 'safety'
+              if re.search(r'学校|こども|子ども|教育|講座|教室', title): return 'education'
+              if re.search(r'スポーツ|大会|ランナー|アクアスロン|ラグビー', title): return 'sports'
+              if re.search(r'店|キッチンカー|カフェ|グルメ|飲食', title): return 'food'
+              if re.search(r'イベント|祭|コンサート|映画|展|募集', title): return 'event'
+              if re.search(r'ごみ|Wi-Fi|宅配|交通|道路|水道', title): return 'life'
+              return 'city'
+
+          def fetch_links(name, url, base, kind):
+              request = urllib.request.Request(url, headers={'User-Agent': 'munakata-now/1.0'})
+              with urllib.request.urlopen(request, timeout=25) as response:
+                  raw = response.read().decode('utf-8', 'ignore')
+              found = []
+              for href, body in re.findall(r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>([\s\S]*?)</a>', raw, re.I):
+                  title = html_lib.unescape(re.sub(r'<[^>]+>', ' ', body))
+                  title = re.sub(r'\s+', ' ', title).strip()
+                  absolute = urllib.parse.urljoin(base, href)
+                  relevant = (kind == 'city' and re.search(r'/kiji\d+|/list\d+|new_list', absolute)) or (kind == 'yurix' and re.search(r'newsDetail\.php|event|ticket|schedule', absolute))
+                  if not relevant or not (8 <= len(title) <= 120): continue
+                  if re.search(r'もっと見る|一覧|ホーム|お問い合わせ|サイトマップ', title): continue
+                  found.append((title, absolute, name))
+              return found[:12]
+
+          paths = sorted(Path('.').glob('payload-*.js'))
+          chunks = []
+          for path in paths:
+              match = re.search(r'push\("([A-Za-z0-9+/=]+)"\)', path.read_text())
+              if not match: raise SystemExit(f'chunk not found: {path}')
+              chunks.append(match.group(1))
+          if len(chunks) != 6: raise SystemExit('unexpected chunk count')
+          inner = gzip.decompress(base64.b64decode(''.join(chunks))).decode()
+          data_match = re.search(r'(<script id="munakata-data" type="application/json">\s*)(.*?)(\s*</script>)', inner, re.S)
+          if not data_match: raise SystemExit('embedded data not found')
+          data = json.loads(data_match.group(2))
+          known = {item['url'] for item in data['news']}
+          now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
+          added = 0
+          for spec in SOURCES:
+              try:
+                  links = fetch_links(*spec)
+              except Exception as exc:
+                  print(f'{spec[0]}: {exc}')
+                  continue
+              for title, url, name in reversed(links):
+                  if url in known: continue
+                  digest = hashlib.sha1(f'{title}|{url}'.encode()).hexdigest()[:10]
+                  data['news'].insert(0, {
+                      'id': f'auto-{digest}', 'title': title,
+                      'summary': f'{name}の公式サイトに新しい情報が公開されました。内容や日時はリンク先で確認してください。',
+                      'category': category(title), 'date': now.strftime('%Y-%m-%d'),
+                      'source': name, 'url': url, 'priority': False,
+                  })
+                  known.add(url)
+                  added += 1
+          data['news'] = data['news'][:36]
+          data['updatedAt'] = now.isoformat()
+          data['updatedLabel'] = now.strftime('%-m月%-d日 %-H:%M')
+          new_data = data_match.group(1) + json.dumps(data, ensure_ascii=False, indent=2) + data_match.group(3)
+          inner = inner[:data_match.start()] + new_data + inner[data_match.end():]
+          payload = base64.b64encode(gzip.compress(inner.encode(), compresslevel=9, mtime=0)).decode()
+          chunk_size = (len(payload) + len(paths) - 1) // len(paths)
+          for index, path in enumerate(paths):
+              chunk = payload[index * chunk_size:(index + 1) * chunk_size]
+              path.write_text(f'window.MUNAKATA_CHUNKS=(window.MUNAKATA_CHUNKS||[]);window.MUNAKATA_CHUNKS.push("{chunk}");\n')
+          print(f'added={added}')
+          PY
+      - name: Commit update
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "munakata-now-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add payload-*.js
+          git commit -m "chore: refresh local information"
+          git push
