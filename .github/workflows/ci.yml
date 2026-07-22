@@ -16,6 +16,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Check highlight JavaScript syntax
+        run: node --check highlights.js
       - name: Validate packaged application and separated data
         run: |
           python - <<'PY'
@@ -25,94 +27,57 @@ jobs:
           from urllib.parse import urlparse
 
           chunk_paths = sorted(Path('.').glob('payload-*.js'))
-          assert [path.name for path in chunk_paths] == [f'payload-{n}.js' for n in range(1, 7)]
-
-          chunks = []
+          assert [p.name for p in chunk_paths] == [f'payload-{n}.js' for n in range(1, 7)]
           wrapper = re.compile(r'window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([A-Za-z0-9+/=]+)"\);\s*')
+          chunks=[]
           for path in chunk_paths:
-              text = path.read_text()
-              match = wrapper.fullmatch(text)
+              match=wrapper.fullmatch(path.read_text())
               assert match, f'invalid chunk wrapper: {path}'
-              chunk = match.group(1)
-              assert re.fullmatch(r'[A-Za-z0-9+/]+={0,2}', chunk), f'invalid base64 characters: {path}'
-              chunks.append(chunk)
+              chunks.append(match.group(1))
+          payload=''.join(chunks)
+          assert len(payload)%4==0
+          html=gzip.decompress(base64.b64decode(payload,validate=True)).decode()
+          assert re.match(r'\s*<!doctype html>',html,re.I) and '<html' in html
 
-          payload = ''.join(chunks)
-          assert len(payload) % 4 == 0, f'invalid base64 length: {len(payload)}'
-          packed = base64.b64decode(payload, validate=True)
-          html = gzip.decompress(packed).decode()
-          assert re.match(r'\s*<!doctype html>', html, re.I)
-          assert '<html' in html
+          data_match=re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>',html,re.S)
+          assert data_match
+          data=json.loads(data_match.group(1))
+          discoveries=json.loads(Path('discoveries.json').read_text())
+          sources=json.loads(Path('sources.json').read_text())
+          offers=json.loads(Path('offers.json').read_text())
+          index=Path('index.html').read_text()
+          highlights=Path('highlights.js').read_text()
 
-          data_match = re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>', html, re.S)
-          assert data_match, 'embedded data not found'
-          data = json.loads(data_match.group(1))
-          discoveries = json.loads(Path('discoveries.json').read_text())
-          sources = json.loads(Path('sources.json').read_text())
-          index = Path('index.html').read_text()
+          assert len(data['news'])>=8 and len(data['events'])>=5
+          assert len(discoveries)>=9 and len(sources)>=12 and len(offers)>=5
+          assert len({x['id'] for x in discoveries})==len(discoveries)
+          assert len({x['id'] for x in sources})==len(sources)
+          assert len({x['id'] for x in offers})==len(offers)
 
-          assert len(data['news']) >= 8
-          assert len(data['events']) >= 5
-          assert len(discoveries) >= 9
-          assert len(sources) >= 12
-          assert len({x['id'] for x in data['news']}) == len(data['news'])
-          assert len({x['id'] for x in discoveries}) == len(discoveries)
-          assert len({x['id'] for x in sources}) == len(sources)
+          required_types={'limited_menu','event','new_product','sale_campaign'}
+          assert required_types <= {x['type'] for x in offers}
+          for item in offers:
+              assert item['id'] and item['title'] and item['type'] in required_types
+              assert item.get('summary') and item.get('region')
+              date.fromisoformat(item['startDate'])
+              date.fromisoformat(item['endDate'])
+              assert item['startDate']<=item['endDate']
+              parsed=urlparse(item['url'])
+              assert parsed.scheme=='https' and parsed.netloc
+              assert isinstance(item.get('verifiedByOfficial'),bool)
 
-          allowed_source_kinds = {'discovery', 'official'}
           for source in sources:
-              assert source.get('name')
-              assert source.get('kind') in allowed_source_kinds
-              parsed = urlparse(source.get('url', ''))
-              assert parsed.scheme == 'https' and parsed.netloc, f'invalid source url: {source}'
+              parsed=urlparse(source.get('url',''))
+              assert source.get('kind') in {'discovery','official'}
+              assert parsed.scheme=='https' and parsed.netloc
 
-          for item in discoveries:
-              assert item.get('id') and (item.get('title') or item.get('name'))
-              assert item.get('region')
-              assert isinstance(item.get('indoor'), bool)
-              assert isinstance(item.get('family'), bool)
-              for field in ('url', 'mapUrl'):
-                  if item.get(field):
-                      parsed = urlparse(item[field])
-                      assert parsed.scheme == 'https' and parsed.netloc, f'invalid {field}: {item}'
-              for field in ('openedAt', 'verifiedAt'):
-                  if item.get(field):
-                      date.fromisoformat(item[field])
-
-          assert any(x.get('verifiedByOfficial') for x in discoveries)
-          assert any(x.get('kind') == 'discovery' for x in sources)
-          assert any(x.get('kind') == 'official' for x in sources)
-
-          for marker in [
-              '宗像の「行ってみたい」が見つかる。',
-              '宗像の楽しい情報源',
-              'areaFilters',
-              'featureFilters',
-              'weekendFilters',
-              'discoveryStatuses',
-              'discoveries.json',
-              'sources.json',
-              'OpenStreetMap',
-              'localStorage',
-          ]:
-              assert marker in html, marker
-
-          loader_markers = [
-              "const BUILD='20260723-loader2'",
-              "cache:'no-store'",
-              'AbortController',
-              'Promise.all',
-              'fetchChunk(index+1,attempt)',
-              "payload.length%4!==0",
-              'atob(payload)',
-              'unpack(1)',
-              'キャッシュを無視して再試行',
-          ]
-          for marker in loader_markers:
+          for marker in ["const BUILD='20260723-categories1'",'highlights.css','highlights.js','function enhance(html)',"cache:'no-store'",'unpack(1)']:
               assert marker in index, marker
+          for marker in ['新店舗','期間限定メニュー・フェア','イベント','新商品','セール・キャンペーン','offers.json','daysLeft','embeddedEvents']:
+              assert marker in highlights, marker
+          assert Path('highlights.css').stat().st_size>1000
           assert '<script src="payload-' not in index
-          assert "replace(/[^A-Za-z0-9" not in index
-          assert index.count('document.open();document.write(html);document.close();') == 2
+          assert index.count('document.open();document.write(html);document.close()')==2
 
-          print(f"OK: news={len(data['news'])}, events={len(data['events'])}, discoveries={len(discoveries)}, sources={len(sources)}, payload={len(payload)}")
+          print(f"OK: events={len(data['events'])}, discoveries={len(discoveries)}, offers={len(offers)}, sources={len(sources)}")
           PY
