@@ -1,6 +1,10 @@
 name: Refresh local information
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/refresh-data.yml'
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
@@ -11,7 +15,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-refresh-verification
   cancel-in-progress: true
 
 jobs:
@@ -129,3 +133,12 @@ jobs:
       - name: Deploy refreshed site to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Record end-to-end verification
+        if: github.event_name == 'push'
+        run: |
+          printf 'verified_at=%s\npage_url=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '${{ steps.deployment.outputs.page_url }}' > REFRESH_VERIFIED.txt
+          git config user.name "munakata-now-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add REFRESH_VERIFIED.txt
+          git commit -m "test: record refresh and deploy verification"
+          git push
