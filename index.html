@@ -1,19 +1,25 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0f766e"><title>むなかたNOW</title></head>
 <body><main id="boot" style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;min-height:100vh;display:grid;place-items:center;background:#f4f7f6;color:#15302d"><p>むなかたNOWを読み込み中…</p></main>
-<script src="payload-1.js"></script>
-<script src="payload-2.js"></script>
-<script src="payload-3.js"></script>
-<script src="payload-4.js"></script>
-<script src="payload-5.js"></script>
-<script src="payload-6.js"></script>
+<script src="payload-1.js?v=20260722-safari-fix1"></script>
+<script src="payload-2.js?v=20260722-safari-fix1"></script>
+<script src="payload-3.js?v=20260722-safari-fix1"></script>
+<script src="payload-4.js?v=20260722-safari-fix1"></script>
+<script src="payload-5.js?v=20260722-safari-fix1"></script>
+<script src="payload-6.js?v=20260722-safari-fix1"></script>
 <script>
-const PAYLOAD=window.MUNAKATA_CHUNKS.join("");
 (async()=>{
   if (!("DecompressionStream" in globalThis)) throw new Error("このブラウザは展開機能に対応していません。SafariまたはChromeを最新版にしてください。");
-  const bytes=Uint8Array.from(atob(PAYLOAD),c=>c.charCodeAt(0));
+  const chunks=window.MUNAKATA_CHUNKS;
+  if (!Array.isArray(chunks)||chunks.length!==6) throw new Error("アプリのデータをすべて読み込めませんでした。再読み込みしてください。");
+  const raw=chunks.join("");
+  const cleaned=raw.replace(/[^A-Za-z0-9+\/_=-]/g,"").replace(/-/g,"+").replace(/_/g,"/").replace(/=+$/g,"");
+  const payload=cleaned+"=".repeat((4-cleaned.length%4)%4);
+  const binary=atob(payload);
+  const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
   const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
   const html=await new Response(stream).text();
+  if (!html.includes("<html")&&!html.includes("<!doctype")) throw new Error("アプリデータの展開に失敗しました。再読み込みしてください。");
   document.open();document.write(html);document.close();
 })().catch(error=>{document.querySelector("#boot").innerHTML=`<section style="max-width:36rem;padding:2rem"><h1>読み込みに失敗しました</h1><p>${error.message}</p><button onclick="location.reload()">再読み込み</button></section>`;console.error(error);});
 </script></body></html>
