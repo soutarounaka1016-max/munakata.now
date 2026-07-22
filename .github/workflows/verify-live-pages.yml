@@ -1,0 +1,59 @@
+name: Verify live GitHub Pages
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-live-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy current site
+        id: deployment
+        uses: actions/deploy-pages@v4
+      - name: Verify public URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='${{ steps.deployment.outputs.page_url }}'
+          code=''
+          for attempt in {1..12}; do
+            code=$(curl -L --silent --show-error --output /tmp/live.html --write-out '%{http_code}' "$url" || true)
+            if [ "$code" = "200" ] && grep -q 'むなかたNOW' /tmp/live.html; then
+              {
+                echo "url=$url"
+                echo "http_status=$code"
+                echo "title_match=success"
+                echo "checked_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              } > live-verification.txt
+              exit 0
+            fi
+            sleep 5
+          done
+          {
+            echo "url=$url"
+            echo "http_status=$code"
+            echo "title_match=failure"
+          } > live-verification.txt
+          cat live-verification.txt
+          exit 1
+      - name: Upload verification result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-verification
+          path: live-verification.txt
