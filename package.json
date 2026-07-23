@@ -1,0 +1,13 @@
+{
+  "name": "munakatanow-deployment",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "test:worker": "node --test worker/test/*.test.mjs",
+    "smoke:worker": "node scripts/smoke-worker.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
