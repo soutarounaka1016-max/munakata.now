@@ -57,6 +57,7 @@ jobs:
           assert len({x['id'] for x in discoveries})==len(discoveries)
           assert len({x['id'] for x in sources})==len(sources)
           assert len({x['id'] for x in all_offers})==len(all_offers)
+          assert all(x.get('mapQuery') for x in discoveries)
 
           required_types={'limited_menu','event','new_product','sale_campaign'}
           counts=Counter(x['type'] for x in all_offers)
@@ -86,14 +87,18 @@ jobs:
               assert source.get('kind') in {'discovery','official'}
               assert parsed.scheme=='https' and parsed.netloc
 
-          for marker in ["const BUILD='20260724-offers2'",'highlights.css','highlights.js','function enhance(html)',"cache:'no-store'",'unpack(1)']:
+          for marker in ["const BUILD='20260724-mapfix1'",'highlights.css','highlights.js','function enhance(html)',"cache:'no-store'",'unpack(1)']:
               assert marker in index, marker
           for marker in ['offers-extra.json','endDateIsEstimate','dateLabel','あと${untilStart}日で開始','もっと見る（残り','slice(0,12)','Object.fromEntries','byKey']:
               assert marker in highlights, marker
+          for marker in ['googleMapsUrl','www.google.com/maps/search','福岡県宗像市','mapQueryFromOsmUrl','rewriteMapLinks','MutationObserver','Googleマップで見る','mapQuery:x.mapQuery']:
+              assert marker in highlights, marker
+          assert 'openstreetmap.org' in highlights
           assert Path('highlights.css').stat().st_size>1500
           assert '.lh-more' in Path('highlights.css').read_text()
+          assert '.lh-action-links' in Path('highlights.css').read_text()
           assert '<script src="payload-' not in index
           assert index.count('document.open();document.write(html);document.close()')==2
 
-          print(f"OK: embedded_events={len(data['events'])}, discoveries={len(discoveries)}, offers={len(all_offers)}, counts={dict(counts)}")
+          print(f"OK: embedded_events={len(data['events'])}, discoveries={len(discoveries)}, offers={len(all_offers)}, map_queries={len(discoveries)}, counts={dict(counts)}")
           PY
