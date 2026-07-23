@@ -15,16 +15,24 @@ for(let attempt=1;attempt<=attempts;attempt+=1){
   const status=(await page.locator('.chain-ai-status').textContent())||'';
   if(!status.includes('接続済み'))throw new Error(`AI status not connected: ${status}`);
   const offers=page.locator('.chain-offer-card');if(await offers.count()<8)throw new Error(`chain offers too few: ${await offers.count()}`);
+  await page.waitForSelector('.chain-offer-card .chain-photo',{timeout:30000});
+  await page.waitForSelector('.chain-offer-card .chain-photo[data-loaded="true"]',{timeout:45000});
+  const loadedPhotos=await page.locator('.chain-offer-card .chain-photo[data-loaded="true"]').count();
+  if(loadedPhotos<4)throw new Error(`loaded chain photos too few: ${loadedPhotos}`);
+  const firstAlt=await page.locator('.chain-offer-card .chain-photo img').first().getAttribute('alt');
+  if(!firstAlt?.includes('イメージ写真'))throw new Error(`photo alt missing: ${firstAlt}`);
+  if(await page.locator('.chain-photo-credit a').count()<4)throw new Error('photo credits missing');
   await page.locator('#chain-rank-button').click();
   await page.waitForSelector('#chain-ranking:not([hidden]) .chain-rank-card',{timeout:70000});
   const boxes=page.locator('.chain-offer-card input[type="checkbox"]');await boxes.nth(0).check();await boxes.nth(1).check();
   await page.locator('#chain-compare-button').click();
   await page.waitForSelector('#chain-comparison:not([hidden]) .chain-compare-card',{timeout:70000});
   if(await page.locator('#chain-comparison .chain-compare-card').count()<2)throw new Error('comparison cards missing');
+  await page.waitForSelector('#chain-comparison .chain-compare-card .chain-photo',{timeout:10000});
   await page.locator('.chain-offer-card .chain-secondary').first().click();
   await page.waitForSelector('.chain-offer-card .chain-ai-box:not([hidden])',{timeout:70000});
   if(consoleErrors.length)throw new Error(`page errors: ${consoleErrors.join(' | ')}`);
-  console.log('Public app chain and AI features smoke passed');
+  console.log(`Public app chain photos and AI features smoke passed: loadedPhotos=${loadedPhotos}`);
   await browser.close();process.exit(0);
  }catch(error){
   lastError=error;console.warn(error.message);await browser.close();if(attempt<attempts)await sleep(delayMs);
