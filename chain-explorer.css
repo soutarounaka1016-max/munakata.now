@@ -1,0 +1,52 @@
+#chain-discovery{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#173532;padding:18px 12px 28px;background:linear-gradient(180deg,#effaf7 0,#f7fbfa 100%)}
+.chain-shell{max-width:1180px;margin:0 auto;background:#fff;border:1px solid #cfe2dd;border-radius:24px;padding:20px;box-shadow:0 16px 44px rgba(24,78,68,.08)}
+.chain-title-row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.chain-eyebrow{margin:0 0 4px;font-size:.72rem;letter-spacing:.16em;font-weight:800;color:#0f766e}
+.chain-title-row h2{margin:0;font-size:clamp(1.35rem,3vw,2rem)}
+.chain-intro{margin:.5rem 0 0;color:#55716d;line-height:1.65}
+.chain-ai-status{white-space:nowrap;border-radius:999px;padding:.45rem .75rem;background:#e9efed;color:#4c625f;font-size:.78rem;font-weight:700}
+.chain-ai-status[data-connected=true]{background:#d8f5e9;color:#0a6b4e}
+.chain-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0 12px}
+.chain-tools button,.chain-filter-button,.chain-secondary,.chain-link-button{appearance:none;border:0;border-radius:999px;padding:.68rem .95rem;font:inherit;font-weight:750;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.chain-tools button{background:#0f766e;color:#fff}
+.chain-tools button:disabled,.chain-secondary:disabled{opacity:.5;cursor:wait}
+#chain-compare-button{background:#e8f3f0;color:#195d56}
+#chain-selection-count{font-size:.8rem;color:#647a77}
+.chain-filter{display:flex;gap:8px;overflow:auto;padding:4px 0 12px;scrollbar-width:none}
+.chain-filter-button{background:#f0f5f4;color:#48615e;white-space:nowrap;padding:.55rem .82rem}
+.chain-filter-button[data-active=true]{background:#183f3a;color:#fff}
+.chain-ai-panel{margin:14px 0 20px;padding:16px;border-radius:18px;background:#f2faf7;border:1px solid #cfe7df}
+.chain-ai-lead{margin:0 0 12px;font-weight:700}
+.chain-rank-card{display:grid;grid-template-columns:36px 1fr;gap:10px;align-items:start;padding:10px 0;border-top:1px solid #d8e8e3}
+.chain-rank-card:first-of-type{border-top:0}
+.chain-rank-number{width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:#0f766e;color:#fff;font-weight:900}
+.chain-rank-card p{margin:.28rem 0 0;color:#54706c;line-height:1.5}
+.chain-section-title{margin:20px 0 10px;font-size:1.1rem}
+.chain-offer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
+.chain-offer-card,.chain-store-card,.chain-compare-card{border:1px solid #d6e3df;border-radius:18px;padding:15px;background:#fff;box-shadow:0 8px 24px rgba(22,64,57,.05)}
+.chain-card-head,.chain-store-top,.chain-meta,.chain-tags,.chain-card-controls,.chain-links{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.chain-offer-card h3,.chain-compare-card h3{font-size:1.04rem;margin:.65rem 0 .35rem;line-height:1.4}
+.chain-chip{display:inline-flex;padding:.28rem .55rem;border-radius:999px;background:#eef4f2;color:#44625e;font-size:.72rem;font-weight:750}
+.chain-brand{background:#dff4ec;color:#0c6952}
+.chain-place,.chain-muted{margin:.2rem 0;color:#6a7d7a;font-size:.83rem}
+.chain-summary{margin:.7rem 0;line-height:1.62;color:#2d4945}
+.chain-meta,.chain-tags{margin:.6rem 0}
+.chain-note,.chain-footnote{font-size:.76rem;line-height:1.55;color:#6f7e7c}
+.chain-ai-box{margin:.75rem 0;padding:.8rem;border-radius:14px;background:#f4f8ff;border:1px solid #dce6f6}
+.chain-ai-box p{margin:.42rem 0;line-height:1.55}
+.chain-ai-detail{font-size:.8rem;color:#566c79}
+.chain-card-controls{margin-top:12px;border-top:1px solid #edf2f0;padding-top:12px}
+.chain-compare{font-size:.8rem;font-weight:700;margin-right:auto}
+.chain-compare input{width:18px;height:18px;vertical-align:middle}
+.chain-secondary{background:#e9f4f1;color:#155f57;padding:.55rem .72rem;font-size:.78rem}
+.chain-link-button{background:#fff;border:1px solid #b9d0ca;color:#155f57;padding:.52rem .7rem;font-size:.78rem}
+.chain-store-details{margin-top:22px;border-top:1px solid #e1ece8;padding-top:14px}
+.chain-store-details summary{cursor:pointer;font-weight:800}
+.chain-store-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px;margin-top:12px}
+.chain-store-card strong{font-size:.9rem}
+.chain-links{margin-top:12px}
+.chain-links a{color:#0f6b62;font-size:.8rem;font-weight:750}
+.chain-compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
+.chain-compare-card p{font-size:.82rem;line-height:1.5;color:#4e6662}
+.chain-verdict{margin:12px 0 0;padding:10px;border-radius:12px;background:#fff;font-weight:750}
+@media(max-width:640px){.chain-shell{padding:15px;border-radius:18px}.chain-title-row{display:block}.chain-ai-status{display:inline-flex;margin-top:10px}.chain-card-controls{align-items:stretch}.chain-compare{width:100%}.chain-secondary,.chain-link-button{flex:1}}

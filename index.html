@@ -16,7 +16,7 @@
   <script>
   (()=>{
     'use strict';
-    const BUILD='20260723-ai3';
+    const BUILD='20260723-ai4';
     const CHUNK_COUNT=6;
     const status=document.querySelector('#boot-status');
     const setStatus=(message)=>{if(status)status.textContent=message};
@@ -34,8 +34,8 @@
       }finally{clearTimeout(timeout)}
     }
     function enhance(html){
-      const styles='<link rel="stylesheet" href="highlights.css?v='+BUILD+'"><link rel="stylesheet" href="ai-recommender.css?v='+BUILD+'">';
-      const scripts='<script src="highlights.js?v='+BUILD+'" defer><\/script><script src="ai-recommender.js?v='+BUILD+'" defer><\/script>';
+      const styles='<link rel="stylesheet" href="highlights.css?v='+BUILD+'"><link rel="stylesheet" href="ai-recommender.css?v='+BUILD+'"><link rel="stylesheet" href="chain-explorer.css?v='+BUILD+'">';
+      const scripts='<script src="highlights.js?v='+BUILD+'" defer><\/script><script src="ai-recommender.js?v='+BUILD+'" defer><\/script><script src="chain-explorer.js?v='+BUILD+'" defer><\/script>';
       return html.replace('</head>',styles+'</head>').replace('</body>',scripts+'</body>');
     }
     async function unpack(attempt){
