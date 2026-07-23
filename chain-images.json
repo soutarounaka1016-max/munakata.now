@@ -1,0 +1,38 @@
+{
+  "マクドナルド": {
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Big%20Mac%20hamburger%20-%20Tokyo%2C%20Japan.jpg?width=960",
+    "alt": "マクドナルドのハンバーガーのイメージ写真",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Big_Mac_hamburger_-_Tokyo,_Japan.jpg",
+    "credit": "Kici / Wikimedia Commons",
+    "license": "Public Domain",
+    "emoji": "🍔",
+    "position": "center"
+  },
+  "スターバックス": {
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Starbucks%20Coffee%20%2829872890224%29.jpg?width=960",
+    "alt": "スターバックスのコーヒーのイメージ写真",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Starbucks_Coffee_(29872890224).jpg",
+    "credit": "GoToVan / Wikimedia Commons",
+    "license": "CC BY 2.0",
+    "emoji": "☕",
+    "position": "center"
+  },
+  "ミスタードーナツ": {
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/Sakura-no-hana%20donut%20of%20Mister%20Donut%20in%20Japan.jpg?width=960",
+    "alt": "ミスタードーナツのドーナツのイメージ写真",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sakura-no-hana_donut_of_Mister_Donut_in_Japan.jpg",
+    "credit": "毒島みるく / Wikimedia Commons",
+    "license": "CC0",
+    "emoji": "🍩",
+    "position": "center"
+  },
+  "モスバーガー": {
+    "url": "https://commons.wikimedia.org/wiki/Special:FilePath/MOS%20Burger%20of%20MOS%20Burger%20in%20Japan.jpg?width=960",
+    "alt": "モスバーガーのハンバーガーのイメージ写真",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:MOS_Burger_of_MOS_Burger_in_Japan.jpg",
+    "credit": "毒島みるく / Wikimedia Commons",
+    "license": "CC0",
+    "emoji": "🍔",
+    "position": "center"
+  }
+}
