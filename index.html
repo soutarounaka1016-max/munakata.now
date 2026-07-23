@@ -16,7 +16,7 @@
   <script>
   (()=>{
     'use strict';
-    const BUILD='20260724-mapfix1';
+    const BUILD='20260723-ai1';
     const CHUNK_COUNT=6;
     const status=document.querySelector('#boot-status');
     const setStatus=(message)=>{if(status)status.textContent=message};
@@ -34,9 +34,9 @@
       }finally{clearTimeout(timeout)}
     }
     function enhance(html){
-      const style='<link rel="stylesheet" href="highlights.css?v='+BUILD+'">';
-      const script='<script src="highlights.js?v='+BUILD+'" defer><\/script>';
-      return html.replace('</head>',style+'</head>').replace('</body>',script+'</body>');
+      const styles='<link rel="stylesheet" href="highlights.css?v='+BUILD+'"><link rel="stylesheet" href="ai-recommender.css?v='+BUILD+'">';
+      const scripts='<script src="highlights.js?v='+BUILD+'" defer><\/script><script src="ai-recommender.js?v='+BUILD+'" defer><\/script>';
+      return html.replace('</head>',styles+'</head>').replace('</body>',scripts+'</body>');
     }
     async function unpack(attempt){
       if(!('DecompressionStream'in globalThis))throw new Error('このSafariでは展開機能を利用できません。iPadOSを更新してください。');
