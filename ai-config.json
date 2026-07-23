@@ -1,5 +1,5 @@
 {
-  "endpoint": "",
-  "mode": "fallback",
+  "endpoint": "https://munakatanow.soutarou-naka-1016.workers.dev/",
+  "mode": "ai",
   "version": 1
 }
