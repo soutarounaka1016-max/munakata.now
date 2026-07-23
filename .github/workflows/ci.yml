@@ -109,11 +109,11 @@ jobs:
           assert root_package['scripts']['deploy']=='wrangler deploy'
           assert root_package['scripts']['smoke:worker']=='node scripts/smoke-worker.mjs'
 
-          for marker in ["const BUILD='20260723-ai1'",'highlights.css','highlights.js','ai-recommender.css','ai-recommender.js',"cache:'no-store'",'unpack(1)']:
+          for marker in ["const BUILD='20260723-ai3'",'highlights.css','highlights.js','ai-recommender.css','ai-recommender.js',"cache:'no-store'",'unpack(1)']:
               assert marker in index, marker
           for marker in ['googleMapsUrl','www.google.com/maps/search','福岡県宗像市','MutationObserver']:
               assert marker in highlights, marker
-          for marker in ['今日の宗像おすすめ','fallback(items,prefs)','askAi(config.endpoint','validAiResult','AIへ接続できなかったため','掲載中の候補だけ']:
+          for marker in ['今日の宗像おすすめ','fallback(items,prefs)','askAi(config.endpoint','validAiResult','AIへ接続できなかったため','掲載中の候補だけ','MAX_AI_CANDIDATES=10','AI_TIMEOUT_MS=45000','rankForAi']:
               assert marker in ai_frontend, marker
           for marker in ['@cf/meta/llama-3.1-8b-instruct-fast',"const VERSION='20260723-ai2'",'env.AI.run','response_format','responseSchema','parseAiResponse','aiBinding','AI_BINDING_MISSING','workerVersion']:
               assert marker in worker, marker
@@ -123,7 +123,7 @@ jobs:
           assert '<script src="payload-' not in index
           assert index.count('document.open();document.write(html);document.close()')==2
 
-          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, root Worker deploy configured, live smoke prepared, counts={dict(counts)}")
+          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, AI candidates reduced, timeout extended, counts={dict(counts)}")
           PY
 
   smoke-worker:

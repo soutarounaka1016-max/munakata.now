@@ -1,7 +1,10 @@
 (()=>{
 'use strict';
-const CONFIG_URL='ai-config.json?v=20260723-ai1';
-const DATA_URLS=['discoveries.json?v=20260723-ai1','offers.json?v=20260723-ai1','offers-extra.json?v=20260723-ai1'];
+const BUILD='20260723-ai3';
+const CONFIG_URL=`ai-config.json?v=${BUILD}`;
+const DATA_URLS=[`discoveries.json?v=${BUILD}`,`offers.json?v=${BUILD}`,`offers-extra.json?v=${BUILD}`];
+const MAX_AI_CANDIDATES=10;
+const AI_TIMEOUT_MS=45000;
 const TYPE_LABELS={new_store:'新店舗',limited_menu:'限定メニュー',event:'イベント',new_product:'新商品',sale_campaign:'セール'};
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;return node};
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -23,6 +26,11 @@ function score(item,prefs){
  if(prefs.time==='short'&&item.type==='event')score-=1;
  return {score,reasons:reasons.slice(0,3)};
 }
+function rankForAi(items,prefs){
+ const matching=prefs.interest==='all'?items:items.filter(item=>item.type===prefs.interest);
+ const pool=matching.length>=3?matching:items;
+ return pool.map(item=>({item,ranking:score(item,prefs).score})).sort((a,b)=>b.ranking-a.ranking||String(a.item.endDate||'9999').localeCompare(String(b.item.endDate||'9999'))).slice(0,MAX_AI_CANDIDATES).map(({item})=>item);
+}
 function fallback(items,prefs){
  const ranked=items.map(item=>({item,...score(item,prefs)})).sort((a,b)=>b.score-a.score||String(a.item.endDate||'9999').localeCompare(String(b.item.endDate||'9999'))).slice(0,3);
  return {mode:'fallback',summary:'掲載中の情報を条件に合わせて選びました。',recommendations:ranked.map(({item,reasons})=>({id:item.id,reason:reasons.length?`${reasons.join('・')}ためおすすめです。`:'現在掲載中で、今日の候補にしやすい情報です。'}))};
@@ -33,13 +41,14 @@ function validAiResult(value,allowedIds){
  return value.recommendations.every(x=>allowedIds.has(x.id)&&typeof x.reason==='string'&&x.reason.length>0&&x.reason.length<=180);
 }
 async function askAi(endpoint,items,prefs){
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),15000);
+ const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),AI_TIMEOUT_MS);
  try{
-  const candidates=items.slice(0,40).map(({id,type,title,place,region,summary,startDate,endDate,indoor,family,limited,verifiedByOfficial})=>({id,type,title,place,region,summary,startDate,endDate,indoor,family,limited,verifiedByOfficial}));
+  const selected=rankForAi(items,prefs);
+  const candidates=selected.map(({id,type,title,place,region,summary,startDate,endDate,indoor,family,limited,verifiedByOfficial})=>({id,type,title,place,region,summary,startDate,endDate,indoor,family,limited,verifiedByOfficial}));
   const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({preferences:prefs,candidates}),signal:controller.signal,cache:'no-store'});
-  if(!response.ok)throw new Error(`AI通信に失敗しました（${response.status}）`);
+  if(!response.ok){let detail='';try{const body=await response.json();detail=body?.code?` / ${body.code}`:''}catch{}throw new Error(`AI通信に失敗しました（${response.status}${detail}）`)}
   const result=await response.json();
-  if(!validAiResult(result,new Set(items.map(x=>x.id))))throw new Error('AIの回答形式が正しくありません');
+  if(!validAiResult(result,new Set(selected.map(x=>x.id))))throw new Error('AIの回答形式が正しくありません');
   return {...result,mode:'ai'};
  }finally{clearTimeout(timeout)}
 }
@@ -51,8 +60,8 @@ async function init(){
  let config={endpoint:'',mode:'fallback'},items=[];
  try{const [loadedConfig,discoveries,offers,extra]=await Promise.all([json(CONFIG_URL),...DATA_URLS.map(json)]);config=loadedConfig;items=normalize(discoveries,[...offers,...extra]);if(config.endpoint){mode.textContent='AI接続可能';mode.dataset.connected='true'}}catch(error){console.error(error);status.textContent='情報の読み込みに失敗しました。再読み込みしてください。'}
  const byId=new Map(items.map(x=>[x.id,x]));
- form.addEventListener('submit',async event=>{event.preventDefault();if(!items.length)return;const data=new FormData(form);const prefs={company:data.get('company'),time:data.get('time'),interest:data.get('interest'),weather:data.get('weather'),limited:data.get('limited'),area:'all'};button.disabled=true;status.textContent=config.endpoint?'AIが掲載情報を確認中…':'端末内で候補を選択中…';let result;try{result=config.endpoint?await askAi(config.endpoint,items,prefs):fallback(items,prefs);status.textContent=result.mode==='ai'?'AIが掲載中の情報から選びました。':'外部AI未接続のため、ルール提案で選びました。'}catch(error){console.warn('AI提案を使えないためルール提案へ切り替えます',error);result=fallback(items,prefs);status.textContent='AIへ接続できなかったため、ルール提案へ自動で切り替えました。'}finally{button.disabled=false}renderResults(results,result,byId)});
+ form.addEventListener('submit',async event=>{event.preventDefault();if(!items.length)return;const data=new FormData(form);const prefs={company:data.get('company'),time:data.get('time'),interest:data.get('interest'),weather:data.get('weather'),limited:data.get('limited'),area:'all'};button.disabled=true;status.textContent=config.endpoint?'AIが候補を確認中です。少しお待ちください…':'端末内で候補を選択中…';let result;try{result=config.endpoint?await askAi(config.endpoint,items,prefs):fallback(items,prefs);status.textContent=result.mode==='ai'?'AIが掲載中の情報から選びました。':'外部AI未接続のため、ルール提案で選びました。'}catch(error){console.warn('AI提案を使えないためルール提案へ切り替えます',error);result=fallback(items,prefs);status.textContent='AIへ接続できなかったため、ルール提案へ自動で切り替えました。'}finally{button.disabled=false}renderResults(results,result,byId)});
 }
-window.MunakataAI={fallback,validAiResult,normalize,score};
+window.MunakataAI={fallback,validAiResult,normalize,score,rankForAi};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
