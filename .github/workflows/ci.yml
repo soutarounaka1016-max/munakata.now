@@ -21,6 +21,7 @@ jobs:
           node --check highlights.js
           node --check ai-recommender.js
           node --check worker/src/index.js
+          node --check scripts/smoke-worker.mjs
       - name: Test AI Worker guards
         run: node --test worker/test/*.test.mjs
       - name: Validate packaged application and separated data
@@ -53,12 +54,15 @@ jobs:
           offers=json.loads(Path('offers.json').read_text())
           extra_offers=json.loads(Path('offers-extra.json').read_text())
           ai_config=json.loads(Path('ai-config.json').read_text())
+          root_wrangler=json.loads(Path('wrangler.jsonc').read_text())
+          nested_wrangler=json.loads(Path('worker/wrangler.jsonc').read_text())
+          root_package=json.loads(Path('package.json').read_text())
           all_offers=offers+extra_offers
           index=Path('index.html').read_text()
           highlights=Path('highlights.js').read_text()
           ai_frontend=Path('ai-recommender.js').read_text()
           worker=Path('worker/src/index.js').read_text()
-          wrangler=Path('worker/wrangler.jsonc').read_text()
+          smoke=Path('scripts/smoke-worker.mjs').read_text()
 
           assert len(data['news'])>=8 and len(data['events'])>=5
           assert len(discoveries)>=9 and len(sources)>=12
@@ -91,10 +95,19 @@ jobs:
 
           endpoint=urlparse(ai_config['endpoint'])
           assert endpoint.scheme=='https'
-          assert endpoint.netloc.endswith('.workers.dev')
           assert endpoint.netloc=='munakatanow.soutarou-naka-1016.workers.dev'
           assert ai_config['mode']=='ai'
           assert ai_config['version']==1
+
+          assert root_wrangler['name']=='munakatanow'
+          assert root_wrangler['main']=='worker/src/index.js'
+          assert root_wrangler['ai']['binding']=='AI'
+          assert root_wrangler['vars']['ALLOWED_ORIGIN']=='https://soutarounaka1016-max.github.io'
+          assert nested_wrangler['name']=='munakatanow'
+          assert nested_wrangler['main']=='src/index.js'
+          assert nested_wrangler['ai']['binding']=='AI'
+          assert root_package['scripts']['deploy']=='wrangler deploy'
+          assert root_package['scripts']['smoke:worker']=='node scripts/smoke-worker.mjs'
 
           for marker in ["const BUILD='20260723-ai1'",'highlights.css','highlights.js','ai-recommender.css','ai-recommender.js',"cache:'no-store'",'unpack(1)']:
               assert marker in index, marker
@@ -102,13 +115,30 @@ jobs:
               assert marker in highlights, marker
           for marker in ['今日の宗像おすすめ','fallback(items,prefs)','askAi(config.endpoint','validAiResult','AIへ接続できなかったため','掲載中の候補だけ']:
               assert marker in ai_frontend, marker
-          for marker in ['@cf/meta/llama-3.1-8b-instruct-fast','env.AI.run','MAX_CANDIDATES=40','validateResult','Origin not allowed','候補にない事実を追加しない']:
+          for marker in ['@cf/meta/llama-3.1-8b-instruct-fast',"const VERSION='20260723-ai2'",'env.AI.run','response_format','responseSchema','parseAiResponse','aiBinding','AI_BINDING_MISSING','workerVersion']:
               assert marker in worker, marker
-          assert '"binding": "AI"' in wrangler
-          assert 'ALLOWED_ORIGIN' in wrangler
+          for marker in ['expectedVersion','Workers AI smoke test passed','smoke-event-1','aiBinding!==true']:
+              assert marker in smoke, marker
           assert Path('ai-recommender.css').stat().st_size>1500
           assert '<script src="payload-' not in index
           assert index.count('document.open();document.write(html);document.close()')==2
 
-          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, Workers AI connected, fallback retained, counts={dict(counts)}")
+          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, root Worker deploy configured, live smoke prepared, counts={dict(counts)}")
           PY
+
+  smoke-worker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify deployed Workers AI response
+        env:
+          AI_ENDPOINT: https://munakatanow.soutarou-naka-1016.workers.dev/
+          SMOKE_ATTEMPTS: '24'
+          SMOKE_DELAY_MS: '10000'
+        run: node scripts/smoke-worker.mjs
