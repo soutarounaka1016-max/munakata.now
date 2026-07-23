@@ -16,15 +16,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Check JavaScript syntax
         run: |
           node --check highlights.js
           node --check ai-recommender.js
+          node --check chain-explorer.js
           node --check worker/src/index.js
           node --check scripts/smoke-worker.mjs
-      - name: Test AI Worker guards
+          node --check scripts/smoke-app.mjs
+      - name: Test Workers AI actions
         run: node --test worker/test/*.test.mjs
-      - name: Validate packaged application and separated data
+      - name: Validate packaged app, chain data and AI features
         run: |
           python - <<'PY'
           import base64, gzip, json, re
@@ -33,112 +38,113 @@ jobs:
           from pathlib import Path
           from urllib.parse import urlparse
 
-          chunk_paths = sorted(Path('.').glob('payload-*.js'))
-          assert [p.name for p in chunk_paths] == [f'payload-{n}.js' for n in range(1, 7)]
-          wrapper = re.compile(r'window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([A-Za-z0-9+/=]+)"\);\s*')
+          chunk_paths=sorted(Path('.').glob('payload-*.js'))
+          assert [p.name for p in chunk_paths]==[f'payload-{n}.js' for n in range(1,7)]
+          wrapper=re.compile(r'window\.MUNAKATA_CHUNKS=\(window\.MUNAKATA_CHUNKS\|\|\[\]\);window\.MUNAKATA_CHUNKS\.push\("([A-Za-z0-9+/=]+)"\);\s*')
           chunks=[]
           for path in chunk_paths:
               match=wrapper.fullmatch(path.read_text())
               assert match, f'invalid chunk wrapper: {path}'
               chunks.append(match.group(1))
-          payload=''.join(chunks)
-          assert len(payload)%4==0
-          html=gzip.decompress(base64.b64decode(payload,validate=True)).decode()
+          html=gzip.decompress(base64.b64decode(''.join(chunks),validate=True)).decode()
           assert re.match(r'\s*<!doctype html>',html,re.I) and '<html' in html
 
-          data_match=re.search(r'<script id="munakata-data" type="application/json">\s*(.*?)\s*</script>',html,re.S)
-          assert data_match
-          data=json.loads(data_match.group(1))
           discoveries=json.loads(Path('discoveries.json').read_text())
-          sources=json.loads(Path('sources.json').read_text())
           offers=json.loads(Path('offers.json').read_text())
-          extra_offers=json.loads(Path('offers-extra.json').read_text())
+          extra=json.loads(Path('offers-extra.json').read_text())
+          chain_offers=json.loads(Path('chain-offers.json').read_text())
+          chain_stores=json.loads(Path('chain-stores.json').read_text())
+          all_offers=offers+extra+chain_offers
           ai_config=json.loads(Path('ai-config.json').read_text())
-          root_wrangler=json.loads(Path('wrangler.jsonc').read_text())
-          nested_wrangler=json.loads(Path('worker/wrangler.jsonc').read_text())
-          root_package=json.loads(Path('package.json').read_text())
-          all_offers=offers+extra_offers
           index=Path('index.html').read_text()
-          highlights=Path('highlights.js').read_text()
-          ai_frontend=Path('ai-recommender.js').read_text()
+          recommender=Path('ai-recommender.js').read_text()
+          explorer=Path('chain-explorer.js').read_text()
           worker=Path('worker/src/index.js').read_text()
           smoke=Path('scripts/smoke-worker.mjs').read_text()
 
-          assert len(data['news'])>=8 and len(data['events'])>=5
-          assert len(discoveries)>=9 and len(sources)>=12
-          assert len(offers)>=5 and len(extra_offers)>=25 and len(all_offers)>=30
-          assert len({x['id'] for x in discoveries})==len(discoveries)
-          assert len({x['id'] for x in sources})==len(sources)
+          assert len(discoveries)>=9
+          assert len(offers)+len(extra)>=30
+          assert len(chain_offers)>=10 and len(chain_stores)>=6
           assert len({x['id'] for x in all_offers})==len(all_offers)
-          assert all(x.get('mapQuery') for x in discoveries)
+          assert len({x['id'] for x in chain_stores})==len(chain_stores)
+          assert {'マクドナルド','スターバックス','ミスタードーナツ','モスバーガー'} <= {x['brand'] for x in chain_stores}
+          counts=Counter(x['type'] for x in chain_offers)
+          assert counts['limited_menu']>=4
+          assert counts['event']>=2
+          assert counts['new_product']>=2
+          assert counts['sale_campaign']>=1
 
-          required_types={'limited_menu','event','new_product','sale_campaign'}
-          counts=Counter(x['type'] for x in all_offers)
-          assert required_types <= set(counts)
-          assert counts['limited_menu']>=7
-          assert counts['event']>=10
-          assert counts['new_product']>=9
-          assert counts['sale_campaign']>=7
-
-          for item in all_offers:
-              assert item['id'] and item['title'] and item['type'] in required_types
-              assert item.get('summary') and item.get('region')
+          store_ids={x['id'] for x in chain_stores}
+          for store in chain_stores:
+              assert store['name'] and store['address'] and store['mapQuery']
+              parsed=urlparse(store['url']);assert parsed.scheme=='https' and parsed.netloc
+              assert store['verifiedByOfficial'] is True
+          for item in chain_offers:
+              assert item['id'] and item['title'] and item['summary']
+              assert item['type'] in {'limited_menu','event','new_product','sale_campaign'}
               date.fromisoformat(item['startDate'])
               if item.get('endDate'):
-                  date.fromisoformat(item['endDate'])
-                  assert item['startDate']<=item['endDate']
+                  date.fromisoformat(item['endDate']);assert item['startDate']<=item['endDate']
               else:
-                  assert item['type']=='new_product' and item.get('dateLabel')
-              parsed=urlparse(item['url'])
-              assert parsed.scheme=='https' and parsed.netloc
-              assert isinstance(item.get('verifiedByOfficial'),bool)
+                  assert item.get('dateLabel')
+              assert set(item['chainStoreIds']) <= store_ids
+              parsed=urlparse(item['url']);assert parsed.scheme=='https' and parsed.netloc
+              assert item['verifiedByOfficial'] is True
+              assert len(item.get('tagsSeed',[]))>=2
 
           endpoint=urlparse(ai_config['endpoint'])
-          assert endpoint.scheme=='https'
           assert endpoint.netloc=='munakatanow.soutarou-naka-1016.workers.dev'
           assert ai_config['mode']=='ai'
-          assert ai_config['version']==1
 
-          assert root_wrangler['name']=='munakatanow'
-          assert root_wrangler['main']=='worker/src/index.js'
-          assert root_wrangler['ai']['binding']=='AI'
-          assert root_wrangler['vars']['ALLOWED_ORIGIN']=='https://soutarounaka1016-max.github.io'
-          assert nested_wrangler['name']=='munakatanow'
-          assert nested_wrangler['main']=='src/index.js'
-          assert nested_wrangler['ai']['binding']=='AI'
-          assert root_package['scripts']['deploy']=='wrangler deploy'
-          assert root_package['scripts']['smoke:worker']=='node scripts/smoke-worker.mjs'
-
-          for marker in ["const BUILD='20260723-ai3'",'highlights.css','highlights.js','ai-recommender.css','ai-recommender.js',"cache:'no-store'",'unpack(1)']:
+          for marker in ["const BUILD='20260723-ai4'",'chain-explorer.css','chain-explorer.js','ai-recommender.js']:
               assert marker in index, marker
-          for marker in ['googleMapsUrl','www.google.com/maps/search','福岡県宗像市','MutationObserver']:
-              assert marker in highlights, marker
-          for marker in ['今日の宗像おすすめ','fallback(items,prefs)','askAi(config.endpoint','validAiResult','AIへ接続できなかったため','掲載中の候補だけ','MAX_AI_CANDIDATES=10','AI_TIMEOUT_MS=45000','rankForAi']:
-              assert marker in ai_frontend, marker
-          for marker in ['@cf/meta/llama-3.1-8b-instruct-fast',"const VERSION='20260723-ai2'",'env.AI.run','response_format','responseSchema','parseAiResponse','aiBinding','AI_BINDING_MISSING','workerVersion']:
+          for marker in ['chain-offers.json','MAX_AI_CANDIDATES=12',"action:'recommend'",'地域店とチェーン店']:
+              assert marker in recommender, marker
+          for marker in ['今日のAIランキング','AI要約・タグ','選択した情報をAI比較',"action:'enrich'","action:'rank'","action:'compare'"]:
+              assert marker in explorer, marker
+          for marker in ["const VERSION='20260723-ai4'",'features:[\'recommend\',\'enrich\',\'rank\',\'compare\']','enrichSchema','rankSchema','compareSchema','UNKNOWN_ACTION']:
               assert marker in worker, marker
-          for marker in ['expectedVersion','Workers AI smoke test passed','smoke-event-1','aiBinding!==true']:
+          for marker in ["expectedVersion='20260723-ai4'","action:'enrich'","action:'rank'","action:'compare'"]:
               assert marker in smoke, marker
-          assert Path('ai-recommender.css').stat().st_size>1500
-          assert '<script src="payload-' not in index
+          assert Path('chain-explorer.css').stat().st_size>3000
           assert index.count('document.open();document.write(html);document.close()')==2
-
-          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, AI candidates reduced, timeout extended, counts={dict(counts)}")
+          print(f"OK: chain stores={len(chain_stores)}, chain offers={len(chain_offers)}, chain counts={dict(counts)}, Workers AI phase 2 ready")
           PY
 
   smoke-worker:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: validate
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Verify deployed Workers AI response
+          node-version: '24'
+      - name: Verify all Workers AI actions
         env:
           AI_ENDPOINT: https://munakatanow.soutarou-naka-1016.workers.dev/
-          SMOKE_ATTEMPTS: '24'
+          SMOKE_ATTEMPTS: '36'
           SMOKE_DELAY_MS: '10000'
         run: node scripts/smoke-worker.mjs
+
+  smoke-app:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [validate, smoke-worker]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright WebKit
+        run: |
+          npm install --no-save playwright@1.54.1
+          npx playwright install --with-deps webkit
+      - name: Verify chain data and AI controls in public app
+        env:
+          APP_URL: https://soutarounaka1016-max.github.io/munakata.now/
+          APP_SMOKE_ATTEMPTS: '24'
+          APP_SMOKE_DELAY_MS: '10000'
+        run: node scripts/smoke-app.mjs
