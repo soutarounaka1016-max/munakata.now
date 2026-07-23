@@ -24,12 +24,13 @@ jobs:
           node --check highlights.js
           node --check ai-recommender.js
           node --check chain-explorer.js
+          node --check chain-photos.js
           node --check worker/src/index.js
           node --check scripts/smoke-worker.mjs
           node --check scripts/smoke-app.mjs
       - name: Test Workers AI actions
         run: node --test worker/test/*.test.mjs
-      - name: Validate packaged app, chain data and AI features
+      - name: Validate packaged app, chain data, photos and AI features
         run: |
           python - <<'PY'
           import base64, gzip, json, re
@@ -54,20 +55,25 @@ jobs:
           extra=json.loads(Path('offers-extra.json').read_text())
           chain_offers=json.loads(Path('chain-offers.json').read_text())
           chain_stores=json.loads(Path('chain-stores.json').read_text())
+          chain_images=json.loads(Path('chain-images.json').read_text())
           all_offers=offers+extra+chain_offers
           ai_config=json.loads(Path('ai-config.json').read_text())
           index=Path('index.html').read_text()
           recommender=Path('ai-recommender.js').read_text()
           explorer=Path('chain-explorer.js').read_text()
+          photos=Path('chain-photos.js').read_text()
           worker=Path('worker/src/index.js').read_text()
           smoke=Path('scripts/smoke-worker.mjs').read_text()
+          app_smoke=Path('scripts/smoke-app.mjs').read_text()
 
           assert len(discoveries)>=9
           assert len(offers)+len(extra)>=30
           assert len(chain_offers)>=10 and len(chain_stores)>=6
           assert len({x['id'] for x in all_offers})==len(all_offers)
           assert len({x['id'] for x in chain_stores})==len(chain_stores)
-          assert {'マクドナルド','スターバックス','ミスタードーナツ','モスバーガー'} <= {x['brand'] for x in chain_stores}
+          required_brands={'マクドナルド','スターバックス','ミスタードーナツ','モスバーガー'}
+          assert required_brands <= {x['brand'] for x in chain_stores}
+          assert required_brands <= set(chain_images)
           counts=Counter(x['type'] for x in chain_offers)
           assert counts['limited_menu']>=4
           assert counts['event']>=2
@@ -91,24 +97,37 @@ jobs:
               parsed=urlparse(item['url']);assert parsed.scheme=='https' and parsed.netloc
               assert item['verifiedByOfficial'] is True
               assert len(item.get('tagsSeed',[]))>=2
+          for brand,image in chain_images.items():
+              assert brand in required_brands
+              for key in ('url','alt','sourceUrl','credit','license','emoji'):
+                  assert image.get(key), f'{brand}: missing {key}'
+              image_url=urlparse(image['url']);source_url=urlparse(image['sourceUrl'])
+              assert image_url.scheme=='https' and image_url.netloc=='commons.wikimedia.org'
+              assert source_url.scheme=='https' and source_url.netloc=='commons.wikimedia.org'
+              assert 'イメージ写真' in image['alt']
 
           endpoint=urlparse(ai_config['endpoint'])
           assert endpoint.netloc=='munakatanow.soutarou-naka-1016.workers.dev'
           assert ai_config['mode']=='ai'
 
-          for marker in ["const BUILD='20260723-ai4'",'chain-explorer.css','chain-explorer.js','ai-recommender.js']:
+          for marker in ["const BUILD='20260724-photo1'",'chain-explorer.css','chain-explorer.js','chain-photos.css','chain-photos.js','ai-recommender.js']:
               assert marker in index, marker
           for marker in ['chain-offers.json','MAX_AI_CANDIDATES=12',"action:'recommend'",'地域店とチェーン店']:
               assert marker in recommender, marker
           for marker in ['今日のAIランキング','AI要約・タグ','選択した情報をAI比較',"action:'enrich'","action:'rank'","action:'compare'"]:
               assert marker in explorer, marker
+          for marker in ['chain-images.json','MutationObserver','loading=\'lazy\'','chain-photo-credit','イメージ写真']:
+              assert marker in photos, marker
           for marker in ["const VERSION='20260723-ai4'",'features:[\'recommend\',\'enrich\',\'rank\',\'compare\']','enrichSchema','rankSchema','compareSchema','UNKNOWN_ACTION']:
               assert marker in worker, marker
           for marker in ["expectedVersion='20260723-ai4'","action:'enrich'","action:'rank'","action:'compare'"]:
               assert marker in smoke, marker
+          for marker in ['chain-photo[data-loaded="true"]','photo credits missing','loaded chain photos too few']:
+              assert marker in app_smoke, marker
           assert Path('chain-explorer.css').stat().st_size>3000
+          assert Path('chain-photos.css').stat().st_size>1000
           assert index.count('document.open();document.write(html);document.close()')==2
-          print(f"OK: chain stores={len(chain_stores)}, chain offers={len(chain_offers)}, chain counts={dict(counts)}, Workers AI phase 2 ready")
+          print(f"OK: chain photos={len(chain_images)}, stores={len(chain_stores)}, offers={len(chain_offers)}, counts={dict(counts)}")
           PY
 
   smoke-worker:
@@ -142,7 +161,7 @@ jobs:
         run: |
           npm install --no-save playwright@1.54.1
           npx playwright install --with-deps webkit
-      - name: Verify chain data and AI controls in public app
+      - name: Verify chain photos and AI controls in public app
         env:
           APP_URL: https://soutarounaka1016-max.github.io/munakata.now/
           APP_SMOKE_ATTEMPTS: '24'
