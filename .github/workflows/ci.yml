@@ -89,8 +89,11 @@ jobs:
               assert parsed.scheme=='https' and parsed.netloc
               assert isinstance(item.get('verifiedByOfficial'),bool)
 
-          assert ai_config['endpoint']==''
-          assert ai_config['mode']=='fallback'
+          endpoint=urlparse(ai_config['endpoint'])
+          assert endpoint.scheme=='https'
+          assert endpoint.netloc.endswith('.workers.dev')
+          assert endpoint.netloc=='munakatanow.soutarou-naka-1016.workers.dev'
+          assert ai_config['mode']=='ai'
           assert ai_config['version']==1
 
           for marker in ["const BUILD='20260723-ai1'",'highlights.css','highlights.js','ai-recommender.css','ai-recommender.js',"cache:'no-store'",'unpack(1)']:
@@ -107,5 +110,5 @@ jobs:
           assert '<script src="payload-' not in index
           assert index.count('document.open();document.write(html);document.close()')==2
 
-          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, AI fallback ready, Worker AI prepared, counts={dict(counts)}")
+          print(f"OK: discoveries={len(discoveries)}, offers={len(all_offers)}, Workers AI connected, fallback retained, counts={dict(counts)}")
           PY
