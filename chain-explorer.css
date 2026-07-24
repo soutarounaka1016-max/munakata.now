@@ -23,7 +23,17 @@
 .chain-rank-card p{margin:.28rem 0 0;color:#54706c;line-height:1.5}
 .chain-section-title{margin:20px 0 10px;font-size:1.1rem}
 .chain-offer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
-.chain-offer-card,.chain-store-card,.chain-compare-card{border:1px solid #d6e3df;border-radius:18px;padding:15px;background:#fff;box-shadow:0 8px 24px rgba(22,64,57,.05)}
+.chain-offer-card,.chain-store-card,.chain-compare-card{position:relative;border:1px solid #d6e3df;border-radius:18px;padding:15px;background:#fff;box-shadow:0 8px 24px rgba(22,64,57,.05);overflow:hidden}
+.chain-offer-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:#83b8ad}
+.chain-offer-card[data-type="limited_menu"]::before{background:#e6a34a}
+.chain-offer-card[data-type="event"]::before{background:#8f78c6}
+.chain-offer-card[data-type="new_product"]::before{background:#3d93c2}
+.chain-offer-card[data-type="sale_campaign"]::before{background:#d86565}
+.chain-offer-card[data-type="limited_menu"] .chain-card-head::before{content:"🍔"}
+.chain-offer-card[data-type="event"] .chain-card-head::before{content:"🎉"}
+.chain-offer-card[data-type="new_product"] .chain-card-head::before{content:"🛍"}
+.chain-offer-card[data-type="sale_campaign"] .chain-card-head::before{content:"💴"}
+.chain-card-head::before{display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:#f2f6f5;font-size:1rem;flex:0 0 auto}
 .chain-card-head,.chain-store-top,.chain-meta,.chain-tags,.chain-card-controls,.chain-links{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .chain-offer-card h3,.chain-compare-card h3{font-size:1.04rem;margin:.65rem 0 .35rem;line-height:1.4}
 .chain-chip{display:inline-flex;padding:.28rem .55rem;border-radius:999px;background:#eef4f2;color:#44625e;font-size:.72rem;font-weight:750}
@@ -49,4 +59,5 @@
 .chain-compare-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
 .chain-compare-card p{font-size:.82rem;line-height:1.5;color:#4e6662}
 .chain-verdict{margin:12px 0 0;padding:10px;border-radius:12px;background:#fff;font-weight:750}
+.chain-photo{display:none!important}
 @media(max-width:640px){.chain-shell{padding:15px;border-radius:18px}.chain-title-row{display:block}.chain-ai-status{display:inline-flex;margin-top:10px}.chain-card-controls{align-items:stretch}.chain-compare{width:100%}.chain-secondary,.chain-link-button{flex:1}}
